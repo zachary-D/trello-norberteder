@@ -270,15 +270,15 @@ describe('Trello', function () {
         var post;
 
         beforeEach(function (done) {
-            sinon.stub(restler, 'get', function (uri, options) {
+            sinon.stub(rest, 'get', function (uri, options) {
                 return {once: function (event, callback) {
                     callback(null, null);
                 }};
             });
 
             trello.getCard(null, 'cardId', function () {
-                query = restler.get.args[0][1].query;
-                get = restler.get;
+                query = rest.get.args[0][1].query;
+                get = rest.get;
                 done();
             });
         });
@@ -288,7 +288,7 @@ describe('Trello', function () {
         });
 
         afterEach(function () {
-            restler.get.restore();
+            rest.get.restore();
         });
 
     });
@@ -298,15 +298,15 @@ describe('Trello', function () {
         var post;
 
         beforeEach(function (done) {
-            sinon.stub(restler, 'get', function (uri, options) {
+            sinon.stub(rest, 'get', function (uri, options) {
                 return {once: function (event, callback) {
                     callback(null, null);
                 }};
             });
 
             trello.getCard('boardId', 'cardId', function () {
-                query = restler.get.args[0][1].query;
-                get = restler.get;
+                query = rest.get.args[0][1].query;
+                get = rest.get;
                 done();
             });
         });
@@ -316,7 +316,7 @@ describe('Trello', function () {
         });
 
         afterEach(function () {
-            restler.get.restore();
+            rest.get.restore();
         });
 
     });
