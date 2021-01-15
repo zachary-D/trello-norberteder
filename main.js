@@ -1,6 +1,13 @@
 require('es6-promise').polyfill();
-var rest = require('needle');
+var needle = require('needle');
 var objectAssign = require('object-assign');
+
+const rest = {
+    delete: "delete",
+    get: "get",
+    post: "post",
+    put: "put"
+}
 
 var minRequestDelay = 500;
 var maxRequestDelay = 7000;
@@ -15,52 +22,50 @@ Trello.prototype.createQuery = function () {
     return {key: this.key, token: this.token};
 };
 
-function makeRequest(fn, uri, options, callback) {
+function makeRequest(method, uri, options, callback) {
     if (callback) {
-      var completeCallback = function (result, response) {
+      var completeCallback = function (error, response) {
         // in case we hit HTTP 429, delay requests by random timeout in between minRequestDelay and maxRequestDelay
         // http://help.trello.com/article/838-api-rate-limits
         if(response && response.statusCode === 429) {
           setTimeout(() => {
-            fn(uri, options).once('complete', completeCallback)
+            needle.request(method, uri, options.query, options, completeCallback);
           }, Math.floor(Math.random() * (maxRequestDelay - minRequestDelay)) + minRequestDelay);
         }
-        else if (result instanceof Error) {
-            callback(result, null);
+        else if (error instanceof Error) {
+            callback(error, null);
         } else if (response != null && response.statusCode >= 400) {
-            const rv = new Error(result)
+            const rv = new Error(error)
             rv.response = response
             callback(rv, null)
         } else {
-            callback(null, result);
+            callback(null, error);
         }
       }
 
-      fn(uri, options).once('complete', completeCallback);
+      needle.request(method, uri, options.query, options, completeCallback);
 
     } else {
         return new Promise((resolve, reject) => {
 
-            var completeCallback = function (result, response) {
+            var completeCallback = function (error, response) {
               // in case we hit HTTP 429, delay requests by random timeout in between minRequestDelay and maxRequestDelay
               // http://help.trello.com/article/838-api-rate-limits
               if(response && response.statusCode === 429) {
                 setTimeout(() => {
-                  fn(uri, options).once('complete', completeCallback)
+                    needle.request(method, uri, options.query, options, completeCallback);
                 }, Math.floor(Math.random() * (maxRequestDelay - minRequestDelay)) + minRequestDelay);
               }
-              else if (result instanceof Error) {
-                  reject(result);
+              else if (error instanceof Error) {
+                  reject(error);
               } else if (response != null && response.statusCode >= 400) {
-                  const rv = new Error(result)
-                  rv.response = response
-                  reject(rv)
+                  reject(new Error(error));
               } else {
-                  resolve(result);
+                  resolve(response.body);
               }
             }
 
-            fn(uri, options).once('complete', completeCallback);
+            needle.request(method, uri, options.query, options, completeCallback);
         });
     }
 }
@@ -76,19 +81,9 @@ Trello.prototype.makeRequest = function (requestMethod, path, options, callback)
     }
 
     var method = requestMethod.toLowerCase();
-    var methods = {
-        'post': rest.post,
-        'get': rest.get,
-        'put': rest.put,
-        'delete': rest.delete
-    };
-
-    if (!methods[method]) {
-        throw new Error('Unsupported requestMethod. Pass one of these methods: POST, GET, PUT, DELETE.');
-    }
     var keyTokenObj = this.createQuery();
     var query = objectAssign({}, options, keyTokenObj);
-    return makeRequest(methods[method], this.uri + path, {query: query}, callback)
+    return makeRequest(method, this.uri + path, {query: query}, callback)
 };
 
 Trello.prototype.addBoard = function (name, description, organizationId, callback) {
